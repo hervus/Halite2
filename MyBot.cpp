@@ -38,7 +38,7 @@ int main() {
                 }
 
                 const hlt::possibly<hlt::Move> move =
-                        hlt::navigation::navigate_ship_to_dock(map, ship, planet, hlt::constants::MAX_SPEED / 2);
+                        hlt::navigation::navigate_ship_to_dock(map, ship, planet, hlt::constants::MAX_SPEED);
                 if (move.second) {
                     moves.push_back(move.first);
                 }
