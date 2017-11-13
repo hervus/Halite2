@@ -38,7 +38,7 @@ namespace hlt {
             return entities_found;
         }
 
-        static possibly<Move> navigate_ship_towards_target(
+        static Move navigate_ship_towards_target(
                 const Map& map,
                 const Ship& ship,
                 const Location& target,
@@ -48,7 +48,7 @@ namespace hlt {
                 const double angular_step_rad)
         {
             if (max_corrections <= 0) {
-                return { Move::noop(), false };
+                return Move::noop();
             }
 
             const double distance = ship.location.get_distance_to(target);
@@ -73,10 +73,10 @@ namespace hlt {
 
             const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad);
 
-            return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
+            return Move::thrust(ship.entity_id, thrust, angle_deg);
         }
 
-        static possibly<Move> navigate_ship_to_dock(
+        static std::pair<Move,Move> navigate_ship_to_dock(
                 const Map& map,
                 const Ship& ship,
                 const Entity& dock_target,
@@ -87,8 +87,27 @@ namespace hlt {
             const double angular_step_rad = M_PI / 180.0;
             const Location& target = ship.location.get_closest_point(dock_target.location, dock_target.radius);
 
-            return navigate_ship_towards_target(
+            Move move_first = navigate_ship_towards_target(
                     map, ship, target, max_thrust, avoid_obstacles, max_corrections, angular_step_rad);
+            Move move_second = navigate_ship_towards_target(
+                    map, ship, target, max_thrust, avoid_obstacles, max_corrections, -angular_step_rad);
+            // If only one Move is valid, it must be the first one
+            if (move_first.type == hlt::MoveType::Noop)
+                return { move_second, move_first };
+            if (move_second.type == hlt::MoveType::Noop)
+                return { move_first, move_second };
+            // If both thrust Moves of the ship_id are identical, only the first one is left valid
+            if ((move_first.move_thrust == move_second.move_thrust) && (move_first.move_angle_deg == move_second.move_angle_deg))
+                return { move_first, Move::noop() };
+            // Provide as move_first the nearest one with the target direction
+            const double target_direction_rad = ship.location.orient_towards_in_rad(target);
+            const int target_direction_deg = util::angle_rad_to_deg_clipped(target_direction_rad);
+            int diff_1 = (target_direction_deg < move_first.move_angle_deg) ? move_first.move_angle_deg-target_direction_deg : target_direction_deg-move_first.move_angle_deg;
+            int diff_2 = (target_direction_deg < move_second.move_angle_deg) ? move_second.move_angle_deg-target_direction_deg : target_direction_deg-move_second.move_angle_deg;
+            if (diff_2 < diff_1)
+                return { move_second, move_first };
+            // Default case
+            return { move_first, move_second };
         }
     }
 }

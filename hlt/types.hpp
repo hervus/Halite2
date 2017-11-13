@@ -17,8 +17,4 @@ namespace hlt {
 
     template<typename T>
     using entity_map = std::unordered_map<EntityId, T>;
-
-    /// A poor man's std::optional.
-    template<typename T>
-    using possibly = std::pair<T, bool>;
 }
